@@ -228,8 +228,7 @@ func quoteArgsCSV(items []string) string {
 	}
 	parts := make([]string, 0, len(items))
 	for _, s := range items {
-		s = strings.ReplaceAll(s, `"`, `\"`)
-		parts = append(parts, `"`+s+`"`)
+		parts = append(parts, `"`+escapeForCSharpString(s)+`"`)
 	}
 	return strings.Join(parts, ", ")
 }
@@ -484,7 +483,7 @@ func buildNamespaceCondTest(spec *rule.Spec, r *rule.Rule, selMap map[string]*ru
 	return newTestCase(spec, r,
 		buildPredicatesChain(primaryPredicate, collectExcludes(r)),
 		condMethod,
-		fmt.Sprintf(`"%s"`, strings.ReplaceAll(pat, `"`, `\"`)),
+		fmt.Sprintf(`"%s"`, escapeForCSharpString(pat)),
 	), nil
 }
 
@@ -508,7 +507,7 @@ func buildNamePatternCondTest(spec *rule.Spec, r *rule.Rule, selMap map[string]*
 	return newTestCase(spec, r,
 		buildPredicatesChain(primaryPredicate, collectExcludes(r)),
 		condMethod,
-		fmt.Sprintf(`"%s"`, strings.ReplaceAll(pat, `"`, `\"`)),
+		fmt.Sprintf(`"%s"`, escapeForCSharpString(pat)),
 	), nil
 }
 

@@ -15,14 +15,14 @@ func buildExcludeChain(ex []excludeData) []string {
 		case "ImplementInterface":
 			out = append(out, fmt.Sprintf(`DoNotImplementInterface(typeof(%s))`, e.Value))
 		case "NameEndsWith":
-			out = append(out, fmt.Sprintf(`DoNotHaveNameEndingWith("%s")`, escapeQuotes(e.Value)))
+			out = append(out, fmt.Sprintf(`DoNotHaveNameEndingWith("%s")`, escapeForCSharpString(e.Value)))
 		case "NameEquals":
-			out = append(out, fmt.Sprintf(`DoNotHaveName("%s")`, escapeQuotes(e.Value)))
+			out = append(out, fmt.Sprintf(`DoNotHaveName("%s")`, escapeForCSharpString(e.Value)))
 		case "NamespaceEquals":
 			if e.IsRegex {
-				out = append(out, fmt.Sprintf(`DoNotResideInNamespaceMatching("%s")`, escapeQuotes(e.Value)))
+				out = append(out, fmt.Sprintf(`DoNotResideInNamespaceMatching("%s")`, escapeForCSharpString(e.Value)))
 			} else {
-				out = append(out, fmt.Sprintf(`DoNotResideInNamespace("%s")`, escapeQuotes(e.Value)))
+				out = append(out, fmt.Sprintf(`DoNotResideInNamespace("%s")`, escapeForCSharpString(e.Value)))
 			}
 		}
 	}
@@ -71,9 +71,9 @@ func buildSubjectPredicate(from *rule.TargetRef, selMap map[string]*rule.Selecto
 		if scopeNs, _ := resolveTarget(from.Scope, selMap); scopeNs != "" {
 			pat, isRegex := splitRegex(scopeNs)
 			if isRegex {
-				parts = append(parts, fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeQuotes(pat)))
+				parts = append(parts, fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeForCSharpString(pat)))
 			} else {
-				parts = append(parts, fmt.Sprintf(`ResideInNamespace("%s")`, escapeQuotes(pat)))
+				parts = append(parts, fmt.Sprintf(`ResideInNamespace("%s")`, escapeForCSharpString(pat)))
 			}
 		}
 	}
@@ -99,9 +99,9 @@ func buildSinglePredicate(ref *rule.TargetRef, selMap map[string]*rule.Selector)
 		}
 		pat, isRegex := splitRegex(ns)
 		if isRegex {
-			return fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeQuotes(pat))
+			return fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeForCSharpString(pat))
 		}
-		return fmt.Sprintf(`ResideInNamespace("%s")`, escapeQuotes(pat))
+		return fmt.Sprintf(`ResideInNamespace("%s")`, escapeForCSharpString(pat))
 	}
 
 	switch ref.Kind {
@@ -112,9 +112,9 @@ func buildSinglePredicate(ref *rule.TargetRef, selMap map[string]*rule.Selector)
 		}
 		pat, isRegex := splitRegex(ns)
 		if ref.IsMatch || isRegex {
-			return fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeQuotes(pat))
+			return fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeForCSharpString(pat))
 		}
-		return fmt.Sprintf(`ResideInNamespace("%s")`, escapeQuotes(pat))
+		return fmt.Sprintf(`ResideInNamespace("%s")`, escapeForCSharpString(pat))
 
 	case rule.SelectorKind_SELECTOR_CLASS, rule.SelectorKind_SELECTOR_INTERFACE:
 		typeFilter := "AreClasses"
@@ -129,9 +129,9 @@ func buildSinglePredicate(ref *rule.TargetRef, selMap map[string]*rule.Selector)
 		}
 		pat, _ := splitRegex(ref.Value)
 		if ref.IsMatch {
-			return fmt.Sprintf(`%s().And().HaveNameMatching("%s")`, typeFilter, escapeQuotes(pat))
+			return fmt.Sprintf(`%s().And().HaveNameMatching("%s")`, typeFilter, escapeForCSharpString(pat))
 		}
-		return fmt.Sprintf(`%s().And().HaveName("%s")`, typeFilter, escapeQuotes(pat))
+		return fmt.Sprintf(`%s().And().HaveName("%s")`, typeFilter, escapeForCSharpString(pat))
 
 	default:
 		if ref.Value == "" {
@@ -139,13 +139,17 @@ func buildSinglePredicate(ref *rule.TargetRef, selMap map[string]*rule.Selector)
 		}
 		pat, isRegex := splitRegex(normalizeNamespace(ref.Value))
 		if isRegex {
-			return fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeQuotes(pat))
+			return fmt.Sprintf(`ResideInNamespaceMatching("%s")`, escapeForCSharpString(pat))
 		}
-		return fmt.Sprintf(`ResideInNamespace("%s")`, escapeQuotes(pat))
+		return fmt.Sprintf(`ResideInNamespace("%s")`, escapeForCSharpString(pat))
 	}
 }
 
-// escapeQuotes escapes double quotes in s for embedding inside a C# string literal.
-func escapeQuotes(s string) string {
-	return strings.ReplaceAll(s, `"`, `\"`)
+// escapeForCSharpString escapes backslashes and double quotes in s so that it
+// can be embedded inside a regular (non-verbatim) C# string literal. Backslashes
+// must be escaped first to avoid double-escaping the quote replacements.
+func escapeForCSharpString(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
 }
