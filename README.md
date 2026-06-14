@@ -98,6 +98,17 @@ Only `code` blocks are processed. `file` blocks are skipped with a warning.
 
 When the rule subject uses the `class` or `interface` keyword, the generated test is prepended with `.AreClasses().And()…` (or `.AreInterfaces().And()…`) so name and namespace filters apply only to the requested kind. Plain `class` / `interface` subjects (without a name pattern) compile to `Types.InCurrentDomain().That().AreClasses()` / `…AreInterfaces()` alone.
 
+When a rule names a specific class or interface (for example in `must implement interface` or `must extend`), always use the fully qualified type name in the `.rule` file. The plugin emits the name verbatim into the `typeof(…)` expression and does not add any `using` directives. If the name is unqualified, the generated file will only compile when the type lives in the same namespace as the generated test class, which is rarely the case. For example, write:
+
+```dsl
+code "repos_use_interface" {
+  class match "regex:.*Repository$" must implement interface "MyApp.Domain.Repositories.IRepository"
+  severity error
+}
+```
+
+Instead of just `"IRepository"`, which would produce `typeof(IRepository)` in the generated C# and fail to compile unless `IRepository` is in scope.
+
 Rules with `severity warning` will be translated to `Assert.Warn(...)` (non-fatal in NUnit). Rules with `severity error` will be translated to `Assert.That(...)`, which fails the test on violation.
 
 ## Unsupported rules
@@ -207,7 +218,7 @@ Two ways to refine the match:
   }
   ```
 
-  Regex targets are **not** supported on `must (not) depend on` rules — NetArchTest offers no regex-aware dependency method. The plugin returns a compile error in that case.
+  Regex targets are **not** supported on `must (not) depend on` rules. NetArchTest offers no regex-aware dependency method. The plugin returns a compile error in that case.
 - **More specific literal prefix.** `"MyApp.Infrastructure.Persistence"` does not match `"MyApp.Infrastructure.Configuration"`.
 - **Excludes.** List sub-namespaces you do not want to match as `exclude` clauses on the rule; they are emitted as `DoNotResideInNamespace(...)` (or the `*Matching` variant when the exclude value is itself regex-prefixed).
 
